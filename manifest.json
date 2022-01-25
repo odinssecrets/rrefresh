@@ -1,0 +1,37 @@
+{
+    "name" : "rrefresh",
+    "version" : "1.0",
+    "description" : "rrefresh",
+    "permissions": [
+        "menus",
+        "tabs"
+    ],
+
+    "browser_action": {
+        "default_icon": "icon/rrefresh.png",
+        "default_title": "RRefresh",
+        "default_popup": "html/rrefresh.html"
+    },
+
+    "background": {
+        "scripts": [
+            "wasm/rrefresh.js",
+            "js/run_wasm.js",
+            "js/menus.js",
+            "js/util.js"
+        ]
+    },
+
+    "content_scripts": [
+        {
+            "matches": ["*://*/*"],
+            "js": [
+            ]
+        }
+    ],
+
+    "web_accessible_resources": [
+        "wasm/rrefresh_bg.wasm"
+    ],
+    "manifest_version": 2
+}

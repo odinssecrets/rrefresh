@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="rrefresh.css"/>
+    </head>
+
+    <body>
+        <form name="input-items">
+            <div id="info-panel">
+                <table id="input-table">
+                    <tr>
+                        <td colspan="3">
+                            <div id="title">RRefresh</div>		
+                        </td>
+                    </tr>
+                    <hr>
+                    <tr>
+                        <td>
+                            <input type="radio" name="select" id="domain-select">
+                            <label for="domain-select">Domain</label>
+                        </td>
+                        <td>
+                            <input type="radio" name="select" id="subpath-select">
+                            <label for="subpath-select">Subpath</label>
+                        </td>
+                        <td>
+                            <input type="radio" name="select" id="fullurl-select" checked>
+                            <label for="fullurl-select">Full Url</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="3">
+                            <div id="selected-url"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <label for="refresh-enabled">Refresh enabled: </label>
+                        </td>
+                        <td colspan="1">
+                            <div class="right-align">
+                                <label class="switch">
+                                    <input type="checkbox" id="refresh-enabled">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <label for="refresh-time">Refresh Time (sec):</label>
+                        </td>
+                        <td colspan="1">
+                            <input class="text-input" type="number" name="time" id="refresh-time" value="30">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <label for="refresh-pause">Pause on typing: </label>
+                        </td>
+                        <td colspan="1">
+                            <div class="right-align">
+                                <label class="switch">
+                                    <input type="checkbox" id="refresh-pause">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <label for="refresh-pause">Sticky reload: </label>
+                        </td>
+                        <td colspan="1">
+                            <div class="right-align">
+                                <label class="switch">
+                                    <input type="checkbox" id="refresh-sticky">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="rr-btn-row">
+                        <td class="rr-btn-hldr" style="left: 0px">
+                            <input type="button" id="reset" class="btn rr-btn" value="Reset"/>
+                        </td>
+                        <td class="rr-btn-hldr"></td>
+                        <td class="rr-btn-hldr" style="right: 0px">
+                            <input type="button" id="apply" class="btn rr-btn" value="Apply"/>
+                        </td>
+                    </tr>
+
+                </table>
+            </div>
+        </form>
+        <script src="/wasm/rrefresh.js"></script>
+        <script type="module" src="panelscript.js"></script>
+    </body>
+
+</html>
+
