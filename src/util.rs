@@ -1,6 +1,8 @@
 use js_sys::Promise;
 use num_enum::TryFromPrimitive;
+use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
+use std::error::Error;
 use std::time::Duration;
 use url::{ParseError, Url};
 use wasm_bindgen::prelude::*;
@@ -33,6 +35,24 @@ pub async fn sleep(duration: Duration) {
 #[wasm_bindgen]
 pub fn update_context_menu() {
     macros::log!("Test menu item");
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Tab {
+    pub id: u32,
+    url: String,
+}
+
+impl Tab {
+    pub fn new(id: u32, url: &str) -> Tab {
+        Tab {
+            id,
+            url: url.to_string(),
+        }
+    }
+    pub fn get_url(&self) -> String {
+        return self.url.clone();
+    }
 }
 
 #[wasm_bindgen]
@@ -105,15 +125,15 @@ fn generate_url_pattern(url: &str, url_type: URL_TYPE) -> String {
 }
 
 #[wasm_bindgen]
-pub fn set_refresh(
-    site: &str,
-    url: &str,
+pub async fn set_refresh(
+    site: String,
+    url: String,
     url_type: u32,
     time_in_sec: u32,
     pause_on_typing: bool,
     sticky_reload: bool,
 ) -> RefreshConfig {
-    let match_str = generate_url_pattern(url, url_type.try_into().unwrap());
+    let match_str = generate_url_pattern(&url, url_type.try_into().unwrap());
     let config = RefreshConfig {
         site: site.to_string(),
         url_pattern: match_str,
@@ -121,7 +141,13 @@ pub fn set_refresh(
         pause_on_typing: pause_on_typing,
         sticky_reload: sticky_reload,
     };
+
     refresh(config.clone());
+    let promise = js_sys::Promise::resolve(&getOpenTabs());
+    let tabs: Vec<Tab> = JsFuture::from(promise).await.unwrap().into_serde().unwrap();
+
+    macros::log!("Testing tabs: {:?}", &tabs);
+
     config
 }
 
@@ -129,4 +155,5 @@ pub fn set_refresh(
 extern "C" {
     pub fn doBgCall(function_name: &str, args: &str);
     pub fn refresh(refresh_config: RefreshConfig);
+    async fn getOpenTabs() -> JsValue;
 }
