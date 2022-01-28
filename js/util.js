@@ -1,12 +1,5 @@
-async function refresh (refreshConfig){
-    var curtab = await browser.tabs.query(
-        {"url":refreshConfig.get_url_pattern()}
-    );
-    if (curtab.length != 1) {
-        return;
-    }
-    curtab = curtab.id;
-    browser.tabs.reload(curtab, {bypassCache: true});
+async function refresh (tab_index){
+    browser.tabs.reload(tab_index, {bypassCache: true});
 }
 
 async function getOpenTabs() {
@@ -14,8 +7,6 @@ async function getOpenTabs() {
     curtabs = curtabs.map(function (tab) {
         return {"id": tab.id, "url": tab.url};
     });
-    console.log("Returning :");
-    console.log(curtabs)
     return curtabs;
 }
 
@@ -30,7 +21,6 @@ function handleMessage(request, sender, sendResponse) {
             request.content.pause,
             request.content.sticky,
       );
-      console.log(rconfig);
       return Promise.resolve({response: "Refresh set"});
   }
 }
