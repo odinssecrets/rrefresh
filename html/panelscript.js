@@ -45,7 +45,7 @@ async function toggleRefresh() {
     var refreshSticky   = document.forms["input-items"].elements["refresh-sticky"];
     var urlLabel        = document.getElementById("selected-url");
     var data            = {
-        func: "set_refresh",
+        func: "",
         url: curtab[0].url,
         urlText: urlLabel.textContent, 
         urlTrype: parseInt(urlType),
@@ -54,12 +54,16 @@ async function toggleRefresh() {
         sticky: refreshSticky.checked,
     };
     if (refreshEnable.checked) {
-        sendMessage(data);
+        data.func = "set_refresh";
     }
+    else {
+        data.func = "remove_refresh";
+    }
+    sendMessage(data);
 }
 
 function handleResponse(message) {
-    //console.log(`background script sent a response: ${message.response}`);
+    console.log(`background script sent a response: ${message.response}`);
 }
 
 function handleError(error) {

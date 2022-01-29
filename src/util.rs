@@ -1,4 +1,4 @@
-#[allow(dead_code)] // There are functions that are used but only from JS calls
+use crate::rr_error::rr_error;
 use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -11,7 +11,12 @@ use wasm_bindgen::{prelude::*, JsCast};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::window;
 
+#[allow(dead_code)] // There are functions that are used but only from JS calls
+
 static RREFRESH_STORAGE: SyncLazy<Mutex<HashMap<String, RefreshConfig>>> =
+    SyncLazy::new(|| Mutex::new(HashMap::new()));
+
+static OPEN_TABS: SyncLazy<Mutex<HashMap<u32, String>>> =
     SyncLazy::new(|| Mutex::new(HashMap::new()));
 
 pub mod macros {
@@ -26,7 +31,7 @@ pub mod macros {
 pub fn create_window_timer(duration: Duration, cfg: &RefreshConfig) -> Result<i32, JsValue> {
     let cb = Closure::wrap(Box::new(|a| {
         refresh_tab(a);
-    }) as Box<dyn FnMut(JsValue)>);
+    }) as Box<dyn Fn(JsValue)>);
     let timer_id = window()
         .unwrap()
         .set_interval_with_callback_and_timeout_and_arguments_1(
@@ -36,6 +41,10 @@ pub fn create_window_timer(duration: Duration, cfg: &RefreshConfig) -> Result<i3
         );
     cb.forget();
     timer_id
+}
+
+pub fn remove_window_timer(time_id: i32) -> () {
+    window().unwrap().clear_interval_with_handle(time_id);
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -128,7 +137,22 @@ fn generate_url_pattern(url: &str, url_type: UrlType) -> String {
 #[wasm_bindgen]
 pub fn refresh_tab(cfg: JsValue) -> () {
     let cfg: RefreshConfig = cfg.into_serde().unwrap();
-    macros::log!("This is the refresh function. Got {:?}", cfg);
+    /*let promise = js_sys::Promise::resolve(&getOpenTabs().await);
+    let tabs: JsValue = JsFuture::from(promise).await.unwrap();
+    let tabs: Vec<Tab> = tabs.into_serde().unwrap();
+    macros::log!("Testing tabs: {:?}", &tabs);
+
+    let tab_id = tabs
+        .into_iter()
+        .filter(|tab| tab.url == cfg.get_url_pattern())
+        .collect::<Vec<Tab>>()[0]
+        .id;*/
+    for (k, v) in OPEN_TABS.lock().unwrap_throw().iter() {
+        if cfg.site == *v {
+            macros::log!("Refreshing tab {:?}", v);
+            refresh(*k);
+        }
+    }
 }
 
 #[wasm_bindgen]
@@ -140,6 +164,11 @@ pub async fn set_refresh(
     pause_on_typing: bool,
     sticky_reload: bool,
 ) -> () {
+    match remove_refresh(site.clone()).await {
+        Ok(_) => {}
+        Err(_) => {}
+    }
+
     let match_str = generate_url_pattern(&url, url_type.try_into().unwrap());
     let mut config = RefreshConfig {
         site: site.to_string(),
@@ -149,36 +178,37 @@ pub async fn set_refresh(
         sticky_reload: sticky_reload,
         timer: 0,
     };
-
-    macros::log!("Doing set refresh");
-
-    let promise = js_sys::Promise::resolve(&getOpenTabs().await);
-    let tabs: JsValue = JsFuture::from(promise).await.unwrap();
-    let tabs: Vec<Tab> = tabs.into_serde().unwrap();
-    macros::log!("Testing tabs: {:?}", &tabs);
-
-    let tab_id = tabs
-        .into_iter()
-        .filter(|tab| tab.url == url)
-        .collect::<Vec<Tab>>()[0]
-        .id;
-    refresh(tab_id);
-
-    macros::log!("{:?}", config);
     let timer = create_window_timer(Duration::from_secs(time_in_sec as u64), &config);
     config.timer = match timer {
         Ok(t) => t,
         Err(_) => panic!("Error setting timer"),
     };
-    macros::log!("{:?}", config);
-
     RREFRESH_STORAGE.lock().unwrap_throw().insert(site, config);
-    macros::log!("{:?}", RREFRESH_STORAGE);
 }
 
 #[wasm_bindgen]
+pub async fn remove_refresh(site: String) -> Result<(), JsValue> {
+    match RREFRESH_STORAGE.lock().unwrap_throw().get(&site) {
+        Some(cfg) => {
+            macros::log!("Removed refresh for {}", site);
+            remove_window_timer(cfg.timer);
+            Ok(())
+        }
+        None => Err(JsValue::from_str(&format!("{} not found in storage", site))),
+    }
+}
+
+#[wasm_bindgen]
+pub fn update_tabs(tab_id: u32, site: String) -> () {
+    OPEN_TABS.lock().unwrap_throw().insert(tab_id, site);
+}
+
+#[wasm_bindgen]
+pub fn remove_tab(tab_id: u32) -> () {
+    OPEN_TABS.lock().unwrap_throw().remove(&tab_id);
+}
+#[wasm_bindgen]
 extern "C" {
-    pub fn doBgCall(function_name: &str, args: &str);
     pub fn refresh(tab_index: u32);
     async fn getOpenTabs() -> JsValue;
 }

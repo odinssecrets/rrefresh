@@ -1,6 +1,17 @@
+function updateTabs(tabId, changeInfo, tab) {
+    const { update_tabs } = wasm_bindgen;
+    update_tabs(tabId, tab.url);
+}
+
+function removeTab(tabId, removeInfo) {
+    const { remove_tab } = wasm_bindgen;
+    remove_tab(tabId);
+}
+
 async function run() {
     await wasm_bindgen(browser.runtime.getURL('wasm/rrefresh_bg.wasm'));
-    // Calls into menus.js to do the context menu setup for the extnesion
-    setupMenu();
+
+    browser.tabs.onUpdated.addListener(updateTabs);
+    browser.tabs.onRemoved.addListener(removeTab);
 }
 run();
