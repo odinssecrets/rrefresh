@@ -21,7 +21,6 @@ pub mod macros {
             web_sys::console::log_1(&format!( $( $t )* ).into());
         }
     }
-
     #[cfg(not(debug_assertions))]
     macro_rules! log {
         ( $( $t:tt )* ) => {};
@@ -134,6 +133,10 @@ impl RefreshConfig {
     pub fn get_url_pattern(&self) -> String {
         self.url_pattern.clone()
     }
+    pub fn match_url(&self, url: &str) -> bool {
+        // TODO update this to do real pattern matching
+        self.url_pattern == url
+    }
     pub fn default() -> RefreshConfig {
         RefreshConfig::default_with_url("")
     }
@@ -157,6 +160,27 @@ enum UrlType {
     Domain,
     Subpath,
     FullUrl,
+}
+
+#[wasm_bindgen]
+pub fn is_sticky(url: String) -> bool {
+    let configs = get_config_by_url(&url);
+    for cfg in configs.iter() {
+        if cfg.sticky_reload {
+            return true;
+        }
+    }
+    false
+}
+
+fn get_config_by_url(url: &str) -> Vec<RefreshConfig> {
+    let mut results = vec![];
+    for (_site, cfg) in RREFRESH_STORAGE.lock().unwrap().iter() {
+        if cfg.match_url(url) {
+            results.push(cfg.clone());
+        }
+    }
+    results
 }
 
 fn generate_url_pattern(url: &str, url_type: UrlType) -> String {
@@ -264,6 +288,7 @@ pub fn remove_tab(tab_id: u32) -> () {
     macros::log!("Removing tab");
     OPEN_TABS.lock().unwrap_throw().remove(&tab_id);
 }
+
 #[wasm_bindgen]
 extern "C" {
     pub fn refresh(tab_index: u32);

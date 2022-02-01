@@ -51,6 +51,13 @@ async function handleMessage(request, sender, sendResponse) {
                 data: config
             });
         }
+        else if (request.content.func === "is_sticky") {
+            const { is_sticky } = wasm_bindgen;
+            var isSticky = is_sticky(request.content.url);
+            return Promise.resolve({
+                response: isSticky
+            });
+        }
     }
     catch (Error) {
         console.log("Got an error handling message");

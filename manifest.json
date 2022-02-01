@@ -25,6 +25,7 @@
         {
             "matches": ["*://*/*"],
             "js": [
+                "js/rrcontent.js"
             ]
         }
     ],
