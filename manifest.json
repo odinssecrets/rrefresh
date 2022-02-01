@@ -17,7 +17,6 @@
         "scripts": [
             "wasm/rrefresh.js",
             "js/run_wasm.js",
-            "js/menus.js",
             "js/util.js"
         ]
     },

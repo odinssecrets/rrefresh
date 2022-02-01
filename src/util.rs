@@ -1,4 +1,3 @@
-use crate::rr_error::rr_error;
 use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -8,22 +7,24 @@ use std::sync::Mutex;
 use std::time::Duration;
 use url::Url;
 use wasm_bindgen::{prelude::*, JsCast};
-use wasm_bindgen_futures::JsFuture;
 use web_sys::window;
-
-#[allow(dead_code)] // There are functions that are used but only from JS calls
 
 static RREFRESH_STORAGE: SyncLazy<Mutex<HashMap<String, RefreshConfig>>> =
     SyncLazy::new(|| Mutex::new(HashMap::new()));
 
-static OPEN_TABS: SyncLazy<Mutex<HashMap<u32, String>>> =
-    SyncLazy::new(|| Mutex::new(HashMap::new()));
+static OPEN_TABS: SyncLazy<Mutex<HashMap<u32, Tab>>> = SyncLazy::new(|| Mutex::new(HashMap::new()));
 
 pub mod macros {
+    #[cfg(debug_assertions)]
     macro_rules! log {
         ( $( $t:tt )* ) => {
             web_sys::console::log_1(&format!( $( $t )* ).into());
         }
+    }
+
+    #[cfg(not(debug_assertions))]
+    macro_rules! log {
+        ( $( $t:tt )* ) => {};
     }
     pub(crate) use log;
 }
@@ -51,13 +52,15 @@ pub fn remove_window_timer(time_id: i32) -> () {
 pub struct Tab {
     pub id: u32,
     url: String,
+    pub active: bool,
 }
 
 impl Tab {
-    pub fn new(id: u32, url: &str) -> Tab {
+    pub fn new(id: u32, url: &str, active: bool) -> Tab {
         Tab {
             id,
             url: url.to_string(),
+            active,
         }
     }
     pub fn get_url(&self) -> String {
@@ -83,13 +86,26 @@ impl URL {
     pub fn get_full_url(&self) -> String {
         self.full_url.clone()
     }
+    pub fn default() -> URL {
+        return URL {
+            path: "".to_string(),
+            domain: "".to_string(),
+            full_url: "".to_string(),
+        };
+    }
 }
 
 #[wasm_bindgen]
 pub fn parse_url(url: &str) -> URL {
-    let cur_tab_url = Url::parse(url).expect("Failed parsing url");
+    let cur_tab_url = match Url::parse(url) {
+        Ok(u) => u,
+        Err(_) => return URL::default(),
+    };
     let path = cur_tab_url.path().to_string();
-    let domain = cur_tab_url.host().expect("Failed to get host").to_string();
+    let domain = match cur_tab_url.host() {
+        Some(s) => s.to_string(),
+        None => "".to_string(),
+    };
     URL {
         path,
         domain,
@@ -102,23 +118,41 @@ pub fn parse_url(url: &str) -> URL {
 pub struct RefreshConfig {
     site: String,
     url_pattern: String,
+    url_type: u8,
     pub refresh_time: u32,
     pub pause_on_typing: bool,
     pub sticky_reload: bool,
     timer: i32,
+    pub enabled: bool,
 }
 
+#[wasm_bindgen]
 impl RefreshConfig {
     pub fn get_site(&self) -> String {
-        return self.site.clone();
+        self.site.clone()
     }
     pub fn get_url_pattern(&self) -> String {
-        return self.url_pattern.clone();
+        self.url_pattern.clone()
+    }
+    pub fn default() -> RefreshConfig {
+        RefreshConfig::default_with_url("")
+    }
+    pub fn default_with_url(url: &str) -> RefreshConfig {
+        RefreshConfig {
+            site: url.to_string(),
+            url_pattern: url.to_string(),
+            url_type: 0,
+            refresh_time: 30,
+            pause_on_typing: false,
+            sticky_reload: false,
+            timer: 0,
+            enabled: true,
+        }
     }
 }
 
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
-#[repr(u32)]
+#[repr(u8)]
 enum UrlType {
     Domain,
     Subpath,
@@ -136,19 +170,10 @@ fn generate_url_pattern(url: &str, url_type: UrlType) -> String {
 
 #[wasm_bindgen]
 pub fn refresh_tab(cfg: JsValue) -> () {
+    macros::log!("Refreshing tab");
     let cfg: RefreshConfig = cfg.into_serde().unwrap();
-    /*let promise = js_sys::Promise::resolve(&getOpenTabs().await);
-    let tabs: JsValue = JsFuture::from(promise).await.unwrap();
-    let tabs: Vec<Tab> = tabs.into_serde().unwrap();
-    macros::log!("Testing tabs: {:?}", &tabs);
-
-    let tab_id = tabs
-        .into_iter()
-        .filter(|tab| tab.url == cfg.get_url_pattern())
-        .collect::<Vec<Tab>>()[0]
-        .id;*/
     for (k, v) in OPEN_TABS.lock().unwrap_throw().iter() {
-        if cfg.site == *v {
+        if cfg.site == *v.url {
             macros::log!("Refreshing tab {:?}", v);
             refresh(*k);
         }
@@ -156,38 +181,65 @@ pub fn refresh_tab(cfg: JsValue) -> () {
 }
 
 #[wasm_bindgen]
+pub fn load_refresh_config(site: String) -> RefreshConfig {
+    macros::log!("Loading from: {:?}", RREFRESH_STORAGE);
+    match RREFRESH_STORAGE.lock().unwrap().get(&site) {
+        Some(cfg) => cfg.clone(),
+        None => {
+            let mut url: String = "".to_string();
+            for (_id, tab) in OPEN_TABS.lock().unwrap_throw().iter() {
+                if tab.active == true {
+                    url = tab.url.clone();
+                }
+            }
+            RefreshConfig::default_with_url(&url)
+            //panic!("No config found for this site"),
+        }
+    }
+}
+
+#[wasm_bindgen]
 pub async fn set_refresh(
     site: String,
-    url: String,
-    url_type: u32,
+    url_type: u8,
     time_in_sec: u32,
     pause_on_typing: bool,
     sticky_reload: bool,
+    refresh_enabled: bool,
 ) -> () {
+    // It doesn't matter if this throws an error, we are going to continue anyway
     match remove_refresh(site.clone()).await {
         Ok(_) => {}
         Err(_) => {}
     }
-
-    let match_str = generate_url_pattern(&url, url_type.try_into().unwrap());
+    macros::log!("Setting refresh");
+    let match_str = generate_url_pattern(&site, url_type.try_into().unwrap_throw());
     let mut config = RefreshConfig {
         site: site.to_string(),
         url_pattern: match_str,
+        url_type: url_type,
         refresh_time: time_in_sec,
         pause_on_typing: pause_on_typing,
         sticky_reload: sticky_reload,
         timer: 0,
+        enabled: refresh_enabled,
     };
-    let timer = create_window_timer(Duration::from_secs(time_in_sec as u64), &config);
-    config.timer = match timer {
-        Ok(t) => t,
-        Err(_) => panic!("Error setting timer"),
-    };
+    if config.enabled {
+        macros::log!("Setting timer");
+        let timer = create_window_timer(Duration::from_secs(time_in_sec as u64), &config);
+        config.timer = match timer {
+            Ok(t) => t,
+            Err(_) => panic!("Error setting timer"),
+        };
+    }
+    macros::log!("{:?}", RREFRESH_STORAGE);
     RREFRESH_STORAGE.lock().unwrap_throw().insert(site, config);
 }
 
 #[wasm_bindgen]
 pub async fn remove_refresh(site: String) -> Result<(), JsValue> {
+    macros::log!("Removing refresh");
+    macros::log!("{:?}", RREFRESH_STORAGE);
     match RREFRESH_STORAGE.lock().unwrap_throw().get(&site) {
         Some(cfg) => {
             macros::log!("Removed refresh for {}", site);
@@ -199,12 +251,17 @@ pub async fn remove_refresh(site: String) -> Result<(), JsValue> {
 }
 
 #[wasm_bindgen]
-pub fn update_tabs(tab_id: u32, site: String) -> () {
-    OPEN_TABS.lock().unwrap_throw().insert(tab_id, site);
+pub fn update_tabs(tab_id: u32, site: String, active: bool) -> () {
+    macros::log!("Updating tabs");
+    OPEN_TABS
+        .lock()
+        .unwrap_throw()
+        .insert(tab_id, Tab::new(tab_id, &site, active));
 }
 
 #[wasm_bindgen]
 pub fn remove_tab(tab_id: u32) -> () {
+    macros::log!("Removing tab");
     OPEN_TABS.lock().unwrap_throw().remove(&tab_id);
 }
 #[wasm_bindgen]

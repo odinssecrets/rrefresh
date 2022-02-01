@@ -7,13 +7,17 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function getSite() {
+    const curtab = await browser.tabs.query({"active":true});
+    return curtab[0].url;
+}
+
 async function updateSelectedUrl () {
     // Load the parse_url function from the wasm
     const { parse_url } = wasm_bindgen;
 
-    // Parse the url
-    const curtab = await browser.tabs.query({"active":true});
-    var parsed_url = parse_url(curtab[0].url);
+    var url = await getSite();
+    var parsed_url = parse_url(url);
 
     // Set label text
     var radios = document.forms["input-items"].elements["select"];
@@ -29,8 +33,7 @@ async function updateSelectedUrl () {
     }
 }
 
-async function toggleRefresh() {
-    const curtab = await browser.tabs.query({"active":true});
+async function applyRefresh() {
     var radios = document.forms["input-items"].elements["select"];
     var urlType = 0;
     for (var i in [...Array(radios.length).keys()]) {
@@ -38,28 +41,24 @@ async function toggleRefresh() {
             urlType = i;
         }
     }
-
     var refreshEnable   = document.forms["input-items"].elements["refresh-enabled"];
     var refreshTime     = document.forms["input-items"].elements["refresh-time"];
     var refreshPause    = document.forms["input-items"].elements["refresh-pause"];
     var refreshSticky   = document.forms["input-items"].elements["refresh-sticky"];
-    var urlLabel        = document.getElementById("selected-url");
+    var url             = await getSite();
     var data            = {
-        func: "",
-        url: curtab[0].url,
-        urlText: urlLabel.textContent, 
-        urlTrype: parseInt(urlType),
+        func: "set_refresh",
+        url: url,
+        urlType: parseInt(urlType),
         time: refreshTime.valueAsNumber,
         pause: refreshPause.checked,
         sticky: refreshSticky.checked,
+        enabled: refreshEnable.checked,
     };
-    if (refreshEnable.checked) {
-        data.func = "set_refresh";
-    }
-    else {
-        data.func = "remove_refresh";
-    }
-    sendMessage(data);
+    var set_promise = await browser.runtime.sendMessage({ 
+        content : data
+    });
+    await set_promise;
 }
 
 function handleResponse(message) {
@@ -70,9 +69,42 @@ function handleError(error) {
     console.log(`Error: ${error}`);
 }
 
-function sendMessage(content) {
-    const sending = browser.runtime.sendMessage({content: content});
-    sending.then(handleResponse, handleError);
+async function loadConfig() {
+    var content = {
+        func: "load_refresh_config",
+        site: await getSite()
+    };
+    try {
+        var response = await browser.runtime.sendMessage( 
+            {content: content}
+        );
+        var config = response.data;
+        await setConfig(config);
+    }
+    catch (error) {
+        console.log("Failed to load config");
+        console.log(error);
+    }
+}
+
+async function setConfig(config) {
+    if (!config) {
+        console.log("Error setting config. Config object not found.");
+        return;
+    }
+
+    var refreshEnable   = document.forms["input-items"].elements["refresh-enabled"];
+    var refreshTime     = document.forms["input-items"].elements["refresh-time"];
+    var refreshPause    = document.forms["input-items"].elements["refresh-pause"];
+    var refreshSticky   = document.forms["input-items"].elements["refresh-sticky"];
+    var urlLabel        = document.getElementById("selected-url");
+
+    refreshEnable.checked = config.enabled;
+    refreshTime.value = config.refreshTime;
+    refreshPause.checked = config.pauseOnTyping;
+    refreshSticky.checked = config.stickyReload; 
+    urlLabel.textContent = config.url;
+    await updateSelectedUrl();
 }
 
 async function setup() {
@@ -81,11 +113,11 @@ async function setup() {
         radios[i].onclick = updateSelectedUrl;
     }
 
-    var applyRefresh = document.forms["input-items"].elements["apply"];
-    applyRefresh.onclick = toggleRefresh;
+    var apply= document.forms["input-items"].elements["apply"];
+    apply.onclick = applyRefresh;
 
     await load_wasm(); 
-    updateSelectedUrl();
+    await loadConfig();
 }
 
 setup();

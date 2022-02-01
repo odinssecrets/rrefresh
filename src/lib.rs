@@ -1,9 +1,10 @@
 #![feature(once_cell)]
 #![feature(async_closure)]
+#![allow(dead_code)]
 
 mod rr_error;
 mod util;
-use util::macros::log;
+
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
