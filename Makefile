@@ -12,3 +12,6 @@ rust-debug:
 
 rust-release:
 	wasm-pack build --release --target=no-modules
+
+clean:
+	rm -r pkg/ wasm/ target/

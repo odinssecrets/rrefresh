@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::lazy::SyncLazy;
-use std::sync::Mutex;
 use std::time::Duration;
+use tokio::sync::Mutex;
 use url::Url;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::window;
@@ -12,7 +12,8 @@ use web_sys::window;
 static RREFRESH_STORAGE: SyncLazy<Mutex<HashMap<String, RefreshConfig>>> =
     SyncLazy::new(|| Mutex::new(HashMap::new()));
 
-static OPEN_TABS: SyncLazy<Mutex<HashMap<u32, Tab>>> = SyncLazy::new(|| Mutex::new(HashMap::new()));
+static OPEN_TABS: SyncLazy<std::sync::Mutex<HashMap<u32, Tab>>> =
+    SyncLazy::new(|| std::sync::Mutex::new(HashMap::new()));
 
 pub mod macros {
     #[cfg(debug_assertions)]
@@ -149,7 +150,7 @@ impl RefreshConfig {
             pause_on_typing: false,
             sticky_reload: false,
             timer: 0,
-            enabled: true,
+            enabled: false,
         }
     }
 }
@@ -163,8 +164,8 @@ enum UrlType {
 }
 
 #[wasm_bindgen]
-pub fn is_sticky(url: String) -> bool {
-    let configs = get_config_by_url(&url);
+pub async fn is_sticky(url: String) -> bool {
+    let configs = get_config_by_url(&url).await;
     for cfg in configs.iter() {
         if cfg.sticky_reload {
             return true;
@@ -173,9 +174,9 @@ pub fn is_sticky(url: String) -> bool {
     false
 }
 
-fn get_config_by_url(url: &str) -> Vec<RefreshConfig> {
+async fn get_config_by_url(url: &str) -> Vec<RefreshConfig> {
     let mut results = vec![];
-    for (_site, cfg) in RREFRESH_STORAGE.lock().unwrap().iter() {
+    for (_site, cfg) in RREFRESH_STORAGE.lock().await.iter() {
         if cfg.match_url(url) {
             results.push(cfg.clone());
         }
@@ -194,10 +195,10 @@ fn generate_url_pattern(url: &str, url_type: UrlType) -> String {
 
 #[wasm_bindgen]
 pub fn refresh_tab(cfg: JsValue) -> () {
-    macros::log!("Refreshing tab");
     let cfg: RefreshConfig = cfg.into_serde().unwrap();
+    macros::log!("Refreshing tab with config {:?}", cfg);
     for (k, v) in OPEN_TABS.lock().unwrap_throw().iter() {
-        if cfg.site == *v.url {
+        if cfg.match_url(&v.url) {
             macros::log!("Refreshing tab {:?}", v);
             refresh(*k);
         }
@@ -205,9 +206,9 @@ pub fn refresh_tab(cfg: JsValue) -> () {
 }
 
 #[wasm_bindgen]
-pub fn load_refresh_config(site: String) -> RefreshConfig {
+pub async fn load_refresh_config(site: String) -> RefreshConfig {
     macros::log!("Loading from: {:?}", RREFRESH_STORAGE);
-    match RREFRESH_STORAGE.lock().unwrap().get(&site) {
+    match RREFRESH_STORAGE.lock().await.get(&site) {
         Some(cfg) => cfg.clone(),
         None => {
             let mut url: String = "".to_string();
@@ -257,14 +258,14 @@ pub async fn set_refresh(
         };
     }
     macros::log!("{:?}", RREFRESH_STORAGE);
-    RREFRESH_STORAGE.lock().unwrap_throw().insert(site, config);
+    RREFRESH_STORAGE.lock().await.insert(site, config);
 }
 
 #[wasm_bindgen]
 pub async fn remove_refresh(site: String) -> Result<(), JsValue> {
     macros::log!("Removing refresh");
     macros::log!("{:?}", RREFRESH_STORAGE);
-    match RREFRESH_STORAGE.lock().unwrap_throw().get(&site) {
+    match RREFRESH_STORAGE.lock().await.get(&site) {
         Some(cfg) => {
             macros::log!("Removed refresh for {}", site);
             remove_window_timer(cfg.timer);
@@ -272,6 +273,69 @@ pub async fn remove_refresh(site: String) -> Result<(), JsValue> {
         }
         None => Err(JsValue::from_str(&format!("{} not found in storage", site))),
     }
+}
+
+#[wasm_bindgen]
+pub async fn set_pause(site: String) -> Result<(), JsValue> {
+    macros::log!("Setting pause for {}", site);
+    let mut new_cfg = None;
+    let ret_val = match RREFRESH_STORAGE.lock().await.get(&site) {
+        Some(cfg) => {
+            if cfg.pause_on_typing && cfg.timer != 0 {
+                let mut tmp_cfg = cfg.clone();
+                macros::log!("Pause set on: {}", site);
+                remove_window_timer(cfg.timer);
+                tmp_cfg.timer = 0;
+                new_cfg = Some(tmp_cfg);
+            }
+            Ok(())
+        }
+        None => Err(JsValue::from_str(&format!("{} not found in storage", site))),
+    };
+    match new_cfg {
+        Some(cfg) => RREFRESH_STORAGE.lock().await.insert(site.clone(), cfg),
+        None => None,
+    };
+    ret_val
+}
+
+#[wasm_bindgen]
+pub async fn remove_pause(site: String) -> Result<(), JsValue> {
+    macros::log!("Removing pause");
+    let mut new_cfg = None;
+    let ret_val = match RREFRESH_STORAGE.lock().await.get(&site) {
+        Some(cfg) => {
+            if cfg.timer == 0 {
+                let mut tmp_cfg = cfg.clone();
+                let timer = create_window_timer(Duration::from_secs(cfg.refresh_time as u64), &cfg);
+                tmp_cfg.timer = match timer {
+                    Ok(t) => t,
+                    Err(_) => {
+                        macros::log!("Failed to set new timer after pause");
+                        0
+                    }
+                };
+                new_cfg = Some(tmp_cfg);
+            }
+            Ok(())
+        }
+        None => Err(JsValue::from_str(&format!("{} not found in storage", site))),
+    };
+    match new_cfg {
+        Some(cfg) => RREFRESH_STORAGE.lock().await.insert(site, cfg),
+        None => None,
+    };
+    ret_val
+}
+
+#[wasm_bindgen]
+pub async fn trigger_tab_reload() -> () {
+    macros::log!("Reloading tabs");
+    let tabs: Vec<Tab> = getOpenTabs().await.into_serde().unwrap();
+    for tab in tabs {
+        OPEN_TABS.lock().unwrap_throw().insert(tab.id, tab);
+    }
+    macros::log!("Got tabs {:?}", OPEN_TABS);
 }
 
 #[wasm_bindgen]

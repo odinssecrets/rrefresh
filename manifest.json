@@ -16,7 +16,6 @@
     "background": {
         "scripts": [
             "wasm/rrefresh.js",
-            "js/run_wasm.js",
             "js/util.js"
         ]
     },
