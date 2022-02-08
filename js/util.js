@@ -36,7 +36,7 @@ async function handleMessage(request, sender, sendResponse) {
         }
         else if (request.content.func === "load_refresh_config") {
             const { load_refresh_config } = wasm_bindgen;
-            var config = await load_refresh_config(request.content.site);
+            var config = await load_refresh_config(request.content.url);
             config = {
                 site: config.get_site(), 
                 url_patter: config.get_url_pattern(),
@@ -46,7 +46,23 @@ async function handleMessage(request, sender, sendResponse) {
                 refreshTime: config.refresh_time,
             };
             return Promise.resolve({
-                response: "Record found for " + request.content.site,
+                response: "Record found for " + request.content.url,
+                data: config
+            });
+        }
+        else if (request.content.func === "default_refresh_config") {
+            const { default_refresh_config } = wasm_bindgen;
+            var config = await default_refresh_config();
+            config = {
+                site: config.get_site(), 
+                url_patter: config.get_url_pattern(),
+                enabled: config.enabled,
+                stickyReload: config.sticky_reload,
+                pauseOnTyping: config.pause_on_typing,
+                refreshTime: config.refresh_time,
+            };
+            return Promise.resolve({
+                response: "Default config loaded",
                 data: config
             });
         }

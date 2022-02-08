@@ -7,6 +7,14 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function handleResponse(message) {
+    console.log(`background script sent a response: ${message.response}`);
+}
+
+function handleError(error) {
+    console.log(`Error: ${error}`);
+}
+
 async function getSite() {
     const curtab = await browser.tabs.query({"active":true});
     return curtab[0].url;
@@ -61,18 +69,44 @@ async function applyRefresh() {
     await set_promise;
 }
 
-function handleResponse(message) {
-    console.log(`background script sent a response: ${message.response}`);
+async function resetRefresh() {
+    removeRefresh();
+    var content = {
+        func: "default_refresh_config",
+    };
+    try {
+        var response = await browser.runtime.sendMessage( 
+            {content: content}
+        );
+        var config = response.data;
+        await setConfig(config);
+    }
+    catch (error) {
+        console.log("Failed to load default config");
+        console.log(error);
+    }
 }
 
-function handleError(error) {
-    console.log(`Error: ${error}`);
+async function removeRefresh() {
+    var content = {
+        func: "remove_refresh",
+        url: await getSite()
+    };
+    try {
+        var response = await browser.runtime.sendMessage( 
+            {content: content}
+        );
+    }
+    catch (error) {
+        console.log("Failed to remove refresh");
+        console.log(error);
+    }
 }
 
 async function loadConfig() {
     var content = {
         func: "load_refresh_config",
-        site: await getSite()
+        url: await getSite()
     };
     try {
         var response = await browser.runtime.sendMessage( 
@@ -113,8 +147,10 @@ async function setup() {
         radios[i].onclick = updateSelectedUrl;
     }
 
-    var apply= document.forms["input-items"].elements["apply"];
+    var apply = document.forms["input-items"].elements["apply"];
     apply.onclick = applyRefresh;
+    var reset = document.forms["input-items"].elements["reset"];
+    reset.onclick = resetRefresh;
 
     await load_wasm(); 
     await loadConfig();

@@ -4,7 +4,8 @@
     "description" : "rrefresh",
     "permissions": [
         "menus",
-        "tabs"
+        "tabs",
+        "storage"
     ],
 
     "browser_action": {

@@ -8,6 +8,7 @@ use tokio::sync::Mutex;
 use url::Url;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::window;
+use web_sys::Storage;
 
 static RREFRESH_STORAGE: SyncLazy<Mutex<HashMap<String, RefreshConfig>>> =
     SyncLazy::new(|| Mutex::new(HashMap::new()));
@@ -145,7 +146,7 @@ impl RefreshConfig {
         RefreshConfig {
             site: url.to_string(),
             url_pattern: url.to_string(),
-            url_type: 0,
+            url_type: 2,
             refresh_time: 30,
             pause_on_typing: false,
             sticky_reload: false,
@@ -153,6 +154,11 @@ impl RefreshConfig {
             enabled: false,
         }
     }
+}
+
+#[wasm_bindgen]
+pub fn default_refresh_config() -> RefreshConfig {
+    RefreshConfig::default()
 }
 
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
@@ -232,6 +238,7 @@ pub async fn set_refresh(
     sticky_reload: bool,
     refresh_enabled: bool,
 ) -> () {
+    macros::log!("Storage: {}", Storage::constructor().get(""));
     // It doesn't matter if this throws an error, we are going to continue anyway
     match remove_refresh(site.clone()).await {
         Ok(_) => {}
