@@ -150,6 +150,7 @@ dependencies = [
  "js-sys",
  "num_enum",
  "serde",
+ "serde_json",
  "tokio",
  "url",
  "wasm-bindgen",

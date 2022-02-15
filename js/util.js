@@ -11,8 +11,8 @@ async function getOpenTabs() {
 }
 
 async function handleMessage(request, sender, sendResponse) {
-    console.log("Received message:");
-    console.log(request);
+    console.log("Received message: " + request.content.func);
+    //console.log(request);
     try {
         if (request.content.func === "set_refresh") {
             const { set_refresh } = wasm_bindgen;
@@ -115,8 +115,14 @@ function removeTab(tabId, removeInfo) {
     remove_tab(tabId);
 }
 
+async function saveToStorage(){
+    const { save_to_storage } = wasm_bindgen;
+    await save_to_storage();
+}
+
 async function run() {
     await wasm_bindgen(browser.runtime.getURL('wasm/rrefresh_bg.wasm'));
+    window.onbeforeunload = saveToStorage;
     browser.tabs.onUpdated.addListener(updateTabs);
     browser.tabs.onRemoved.addListener(removeTab);
     startRrMessageHandler();

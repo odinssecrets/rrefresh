@@ -8,9 +8,8 @@ use tokio::sync::Mutex;
 use url::Url;
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::window;
-use web_sys::Storage;
 
-static RREFRESH_STORAGE: SyncLazy<Mutex<HashMap<String, RefreshConfig>>> =
+pub static RREFRESH_STORAGE: SyncLazy<Mutex<HashMap<String, RefreshConfig>>> =
     SyncLazy::new(|| Mutex::new(HashMap::new()));
 
 static OPEN_TABS: SyncLazy<std::sync::Mutex<HashMap<u32, Tab>>> =
@@ -119,11 +118,11 @@ pub fn parse_url(url: &str) -> URL {
 pub struct RefreshConfig {
     site: String,
     url_pattern: String,
-    url_type: u8,
+    pub url_type: u8,
     pub refresh_time: u32,
     pub pause_on_typing: bool,
     pub sticky_reload: bool,
-    timer: i32,
+    pub timer: i32,
     pub enabled: bool,
 }
 
@@ -229,6 +228,18 @@ pub async fn load_refresh_config(site: String) -> RefreshConfig {
     }
 }
 
+pub fn apply_refresh(time: u64, cfg: &RefreshConfig) -> i32 {
+    if cfg.enabled {
+        macros::log!("Setting timer");
+        match create_window_timer(Duration::from_secs(time), cfg) {
+            Ok(t) => t,
+            Err(_) => 0,
+        }
+    } else {
+        0
+    }
+}
+
 #[wasm_bindgen]
 pub async fn set_refresh(
     site: String,
@@ -238,7 +249,6 @@ pub async fn set_refresh(
     sticky_reload: bool,
     refresh_enabled: bool,
 ) -> () {
-    macros::log!("Storage: {}", Storage::constructor().get(""));
     // It doesn't matter if this throws an error, we are going to continue anyway
     match remove_refresh(site.clone()).await {
         Ok(_) => {}
@@ -256,14 +266,7 @@ pub async fn set_refresh(
         timer: 0,
         enabled: refresh_enabled,
     };
-    if config.enabled {
-        macros::log!("Setting timer");
-        let timer = create_window_timer(Duration::from_secs(time_in_sec as u64), &config);
-        config.timer = match timer {
-            Ok(t) => t,
-            Err(_) => panic!("Error setting timer"),
-        };
-    }
+    config.timer = apply_refresh(time_in_sec as u64, &config);
     macros::log!("{:?}", RREFRESH_STORAGE);
     RREFRESH_STORAGE.lock().await.insert(site, config);
 }
