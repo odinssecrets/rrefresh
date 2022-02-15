@@ -135,9 +135,20 @@ impl RefreshConfig {
     pub fn get_url_pattern(&self) -> String {
         self.url_pattern.clone()
     }
+    pub fn set_url_pattern(&mut self) -> () {
+        let url: URL = parse_url(&self.site);
+        self.url_pattern = match self.url_type.try_into().unwrap() {
+            UrlType::Domain => url.domain,
+            UrlType::Subpath => url.path,
+            UrlType::FullUrl => url.full_url,
+        };
+    }
     pub fn match_url(&self, url: &str) -> bool {
-        // TODO update this to do real pattern matching
-        self.url_pattern == url
+        match self.url_type.try_into().unwrap() {
+            UrlType::Domain => parse_url(url).domain == self.url_pattern,
+            UrlType::Subpath => parse_url(url).path.starts_with(&self.url_pattern),
+            UrlType::FullUrl => self.url_pattern == url,
+        }
     }
     pub fn default() -> RefreshConfig {
         RefreshConfig::default_with_url("")
@@ -189,15 +200,6 @@ async fn get_config_by_url(url: &str) -> Vec<RefreshConfig> {
         }
     }
     results
-}
-
-fn generate_url_pattern(url: &str, url_type: UrlType) -> String {
-    let url: URL = parse_url(url);
-    match url_type {
-        UrlType::Domain => format!("{}://{}/{}", "*", url.domain, "*"),
-        UrlType::Subpath => format!("{}://{}", "*", url.path),
-        UrlType::FullUrl => format!("{}", url.full_url),
-    }
 }
 
 #[wasm_bindgen]
@@ -257,10 +259,9 @@ pub async fn set_refresh(
         Err(_) => {}
     }
     macros::log!("Setting refresh");
-    let match_str = generate_url_pattern(&site, url_type.try_into().unwrap_throw());
     let mut config = RefreshConfig {
         site: site.to_string(),
-        url_pattern: match_str,
+        url_pattern: "".to_string(),
         url_type: url_type,
         refresh_time: time_in_sec,
         pause_on_typing: pause_on_typing,
@@ -269,6 +270,7 @@ pub async fn set_refresh(
         timer: 0,
         enabled: refresh_enabled,
     };
+    config.set_url_pattern();
     config.timer = apply_refresh(time_in_sec as u64, &config);
     macros::log!("{:?}", RREFRESH_STORAGE);
     RREFRESH_STORAGE.lock().await.insert(site, config);
