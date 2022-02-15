@@ -12,7 +12,7 @@ function messageError(err) {
 function pauseRefresh() {
     console.log("Trying to pause");
     sendMessage(
-        {func: "set_pause", url: window.location.href}, 
+        {func: "set_pause", url: window.location.href, reason: "keydown"}, 
         function () {
             if (localStorage.pauseTimer) {
                 window.clearTimeout(localStorage.pauseTimer);

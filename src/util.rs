@@ -121,6 +121,7 @@ pub struct RefreshConfig {
     pub url_type: u8,
     pub refresh_time: u32,
     pub pause_on_typing: bool,
+    pub paused: bool,
     pub sticky_reload: bool,
     pub timer: i32,
     pub enabled: bool,
@@ -148,6 +149,7 @@ impl RefreshConfig {
             url_type: 2,
             refresh_time: 30,
             pause_on_typing: false,
+            paused: false,
             sticky_reload: false,
             timer: 0,
             enabled: false,
@@ -262,6 +264,7 @@ pub async fn set_refresh(
         url_type: url_type,
         refresh_time: time_in_sec,
         pause_on_typing: pause_on_typing,
+        paused: false,
         sticky_reload: sticky_reload,
         timer: 0,
         enabled: refresh_enabled,
@@ -286,17 +289,22 @@ pub async fn remove_refresh(site: String) -> Result<(), JsValue> {
 }
 
 #[wasm_bindgen]
-pub async fn set_pause(site: String) -> Result<(), JsValue> {
+pub async fn set_pause(site: String, pause_reason: String) -> Result<(), JsValue> {
     macros::log!("Setting pause for {}", site);
     let mut new_cfg = None;
     let ret_val = match RREFRESH_STORAGE.lock().await.get(&site) {
         Some(cfg) => {
-            if cfg.pause_on_typing && cfg.timer != 0 {
-                let mut tmp_cfg = cfg.clone();
-                macros::log!("Pause set on: {}", site);
-                remove_window_timer(cfg.timer);
-                tmp_cfg.timer = 0;
-                new_cfg = Some(tmp_cfg);
+            if (pause_reason == "keydown" && cfg.pause_on_typing) || (pause_reason == "button") {
+                if cfg.timer != 0 && cfg.paused == false {
+                    let mut tmp_cfg = cfg.clone();
+                    macros::log!("Pause set on: {}", site);
+                    remove_window_timer(cfg.timer);
+                    tmp_cfg.timer = 0;
+                    tmp_cfg.paused = true;
+                    new_cfg = Some(tmp_cfg);
+                }
+            } else {
+                macros::log!("Did not pause, {:?}", pause_reason);
             }
             Ok(())
         }
@@ -315,7 +323,7 @@ pub async fn remove_pause(site: String) -> Result<(), JsValue> {
     let mut new_cfg = None;
     let ret_val = match RREFRESH_STORAGE.lock().await.get(&site) {
         Some(cfg) => {
-            if cfg.timer == 0 {
+            if cfg.timer == 0 && cfg.paused {
                 let mut tmp_cfg = cfg.clone();
                 let timer = create_window_timer(Duration::from_secs(cfg.refresh_time as u64), &cfg);
                 tmp_cfg.timer = match timer {
@@ -325,6 +333,7 @@ pub async fn remove_pause(site: String) -> Result<(), JsValue> {
                         0
                     }
                 };
+                tmp_cfg.paused = false;
                 new_cfg = Some(tmp_cfg);
             }
             Ok(())

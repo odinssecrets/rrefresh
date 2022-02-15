@@ -87,6 +87,26 @@ async function resetRefresh() {
     }
 }
 
+async function pauseRefresh() {
+    var pause = document.forms["input-items"].elements["pause"];
+    var data = {
+        func: "",
+        url: await getSite(),
+        reason: "button"
+    };
+    if (pause.value === "Pause") {
+        pause.value = "Unpause";
+        data.func = "set_pause";
+    }
+    else {
+        pause.value = "Pause";
+        data.func = "remove_pause";
+    }
+    await browser.runtime.sendMessage({ 
+        content : data
+    });
+}
+
 async function removeRefresh() {
     var content = {
         func: "remove_refresh",
@@ -132,12 +152,19 @@ async function setConfig(config) {
     var refreshPause    = document.forms["input-items"].elements["refresh-pause"];
     var refreshSticky   = document.forms["input-items"].elements["refresh-sticky"];
     var urlLabel        = document.getElementById("selected-url");
+    var pause           = document.forms["input-items"].elements["pause"];
 
     refreshEnable.checked = config.enabled;
     refreshTime.value = config.refreshTime;
     refreshPause.checked = config.pauseOnTyping;
     refreshSticky.checked = config.stickyReload; 
     urlLabel.textContent = config.url;
+    console.log(config);
+    if (config.paused) {
+        pause.value = "Unpause";
+    } else {
+        pause.value = "Pause";
+    }
     await updateSelectedUrl();
 }
 
@@ -151,6 +178,8 @@ async function setup() {
     apply.onclick = applyRefresh;
     var reset = document.forms["input-items"].elements["reset"];
     reset.onclick = resetRefresh;
+    var pause = document.forms["input-items"].elements["pause"];
+    pause.onclick = pauseRefresh;
 
     await load_wasm(); 
     await loadConfig();
