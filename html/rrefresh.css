@@ -1,6 +1,7 @@
 body {
-    width: 350px;
-    height: 250px;
+    width: 550px;
+    max-height: 275px;
+    min-height: 275px;
     overflow: hidden;
     background: grey;
 }
@@ -11,11 +12,11 @@ table {
 }
 
 tbody {
-	width: 100%;
+    width: 100%;
 }
 
 tr {
-	width: 100%;
+    width: 100%;
 }
 
 #info-panel {
@@ -24,7 +25,11 @@ tr {
 }
 
 #input-items {
-    height: 90%;
+    height: 100%;
+}
+
+#tab_holder {
+    height: auto;
 }
 
 #input-table {
@@ -42,25 +47,30 @@ tr {
     margin-right: 10px;
 }
 
+.filler-row {
+    height: 3px;
+    background-color: grey;
+}
+
 .rr-btn-row {
     vertical-align: center;
     height: 100%;
 }
 
 .rr-btn-hldr {
-	margin: auto;
+    margin: auto;
     width: 100%;
 }
 
 .rr-btn {
-	width: 100%;
-	height: 100%;	
+    width: 100%;
+    height: 100%;	
 }
 
 .right-align {
-	margin-left: auto;
-	right: 0px;
-	width: min-content;
+    margin-left: auto;
+    right: 0px;
+    width: min-content;
 }
 
 #selected-url {
@@ -71,6 +81,7 @@ tr {
     padding-top: 5px;
     padding-bottom: 5px;
     overflow-x: auto;
+    white-space: nowrap;
 }
 
 #title {
@@ -86,67 +97,159 @@ tr {
 
 /* 
  * On/off button 
- * https://www.w3schools.com/howto/howto_css_switch.asp 
+ *
+ * www.w3schools.com/howto/howto_css_switch.asp 
  */
- /* The switch - the box around the slider */
+
+/* The switch - the box around the slider */
 .switch {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 26px;
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
 }
 
 /* Hide default HTML checkbox */
 .switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
+    opacity: 0;
+    width: 0;
+    height: 0;
 }
 
 /* The slider */
 .slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  -webkit-transition: .4s;
-  transition: .4s;
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
 }
 
 .slider:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 5px;
-  bottom: 4px;
-  background-color: white;
-  -webkit-transition: .4s;
-  transition: .4s;
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 5px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
 }
 
 input:checked + .slider {
-  background-color: #2196F3;
+    background-color: #2196F3;
 }
 
 input:focus + .slider {
-  box-shadow: 0 0 1px #2196F3;
+    box-shadow: 0 0 1px #2196F3;
 }
 
 input:checked + .slider:before {
-  -webkit-transform: translateX(22px);
-  -ms-transform: translateX(22px);
-  transform: translateX(22px);
+    -webkit-transform: translateX(22px);
+    -ms-transform: translateX(22px);
+    transform: translateX(22px);
 }
 
 /* Rounded sliders */
 .slider.round {
-  border-radius: 24px;
+    border-radius: 24px;
 }
 
 .slider.round:before {
-  border-radius: 50%;
+    border-radius: 50%;
 } 
+
+#tab_buttons {
+    background-color: #ccc;
+}
+
+#tab_buttons button:hover {
+    background-color: #ddd;
+}
+
+#tab_buttons button.active {
+    background-color: #f1f1f1;
+}
+
+.tablinks {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding-top: 10px;
+    padding-bottom: 7px;
+    border-radius: 0 0 5px 5px;
+    transition: 0.3s;
+}
+
+.tr {
+    display: table-row;
+}
+
+.td {
+    display: table-cell;
+}
+
+#refresh-entries {
+    width: 100%;
+    max-height: 245px !important;
+    min-height: 245px !important;
+    overflow-y: auto;
+    background: lightgrey;
+}
+
+#entry-table {
+    display: table;
+    background: lightgrey;
+    width: 100%;
+}
+
+#entry-headers {
+   width: 100%;
+}
+
+#entry-table .th {
+    text-align: left;
+    width: auto;
+}
+
+#entry-table .tr {
+    max-height: 14px;
+}
+
+#entry-table .tr table tr {
+    overflow: hidden;
+    max-height: 14px;
+    white-space: nowrap;
+}
+
+#entry-table .td {
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 100px;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.inactive-td {
+    background: red;
+}
+
+.active-td {
+    background: green;
+}
+
+#entry-table .tr:nth-child(odd) {
+    background:lightgrey;
+}
+
+#entry-table .tr:nth-child(even) {
+    background:darkgrey;
+}

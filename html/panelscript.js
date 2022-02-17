@@ -69,8 +69,10 @@ async function applyRefresh() {
     await set_promise;
 }
 
-async function resetRefresh() {
-    removeRefresh();
+async function getDefaultConfig() {
+    if (localStorage.defaultConfig) {
+        return JSON.parse(localStorage.defaultConfig);
+    }
     var content = {
         func: "default_refresh_config",
     };
@@ -79,12 +81,19 @@ async function resetRefresh() {
             {content: content}
         );
         var config = response.data;
-        await setConfig(config);
+        localStorage.defaultConfig = JSON.stringify(config);
+        return config;
     }
     catch (error) {
         console.log("Failed to load default config");
         console.log(error);
     }
+}
+
+async function resetRefresh() {
+    removeRefresh();
+    var config = await getDefaultConfig();
+    await setConfig(config);
 }
 
 async function pauseRefresh() {
@@ -154,18 +163,107 @@ async function setConfig(config) {
     var urlLabel        = document.getElementById("selected-url");
     var pause           = document.forms["input-items"].elements["pause"];
 
-    refreshEnable.checked = config.enabled;
-    refreshTime.value = config.refreshTime;
-    refreshPause.checked = config.pauseOnTyping;
-    refreshSticky.checked = config.stickyReload; 
-    urlLabel.textContent = config.url;
-    console.log(config);
+    refreshEnable.checked = config.Enabled;
+    refreshTime.value = config.RefreshTime;
+    refreshPause.checked = config.PauseOnTyping;
+    refreshSticky.checked = config.StickyReload; 
+    urlLabel.textContent = config.UrlPattern;
     if (config.paused) {
         pause.value = "Unpause";
     } else {
         pause.value = "Pause";
     }
     await updateSelectedUrl();
+}
+
+function switchTab(newTab) {
+	var tabs = document.getElementsByClassName("tabs");	
+	var tabBtns = document.getElementsByClassName("tablinks");	
+	for (var i = 0; i < tabs.length; i++) {
+		if (tabs[i].id === newTab) {
+			tabs[i].hidden = false;
+            tabBtns[i].classList.add("active");
+		}
+		else {
+			tabs[i].hidden = true;
+            tabBtns[i].classList.remove("active");
+		}
+	}
+}
+
+async function getAllConfigs() {
+    var content = {
+        func: "get_all_configs",
+    };
+    try {
+        var response = await browser.runtime.sendMessage( 
+            {content: content}
+        );
+        return response.data;
+    }
+    catch (error) {
+        console.log("Failed to load all configs");
+        console.log(error);
+        return null;
+    }
+}
+
+async function setEntries() {
+    var configs = await getAllConfigs();
+    if (!configs || configs.length == 0) {
+        var defaultConfig = await getDefaultConfig();
+        configs = [defaultConfig]; 
+    }
+    var entryTable = document.getElementById("entry-table");
+    Object.entries(configs).forEach(config => {
+        config = config[1];
+        var newRow = document.createElement("div");
+        var siteData = document.createElement("div");
+        var siteText = document.createTextNode(config.Site);
+        var active = document.createElement("div");
+        newRow.classList.add("tr");
+        siteData.classList.add("td");
+        siteData.title = config.UrlPattern;
+        siteData.appendChild(siteText);
+        active.classList.add("td");
+        if (config.Enabled) {
+            active.classList.add("active-td");
+        }
+        else {
+            active.classList.add("inactive-td");
+        }
+        newRow.appendChild(siteData);
+        newRow.appendChild(active);
+        var newTable = document.createElement("table");
+        Object.entries(config).forEach(([key,value]) => {
+            var newTableRow = document.createElement("tr");
+            var newData = document.createElement("td");
+            var newText = document.createTextNode(value);
+            var newHeader = document.createElement("td");
+            var newHeaderText = document.createTextNode(key);
+            newData.title = value;
+            newData.appendChild(newText);
+            newHeader.title = key;
+            newHeader.appendChild(newHeaderText);
+            newTableRow.appendChild(newHeader);
+            newTableRow.appendChild(newData);
+            newTable.append(newTableRow);
+        });
+        var hiddenRow = document.createElement("div");
+        hiddenRow.appendChild(newTable);
+        hiddenRow.hidden = true;
+        newRow.classList.add("tr");
+        newRow.onclick = function() {
+            if (newRow.nextSibling.hidden) {
+                newRow.nextSibling.hidden = false;
+            }
+            else {
+                newRow.nextSibling.hidden = true;
+            }
+        };
+        entryTable.appendChild(newRow);
+        entryTable.appendChild(hiddenRow);
+    });
 }
 
 async function setup() {
@@ -181,8 +279,15 @@ async function setup() {
     var pause = document.forms["input-items"].elements["pause"];
     pause.onclick = pauseRefresh;
 
+	var setRefreshTab = document.getElementById("set-refresh-tab");
+	setRefreshTab.onclick = function(){switchTab("set-refresh")};
+    setRefreshTab.classList.add("active");
+	var refreshEntriesTab = document.getElementById("refresh-entries-tab");
+	refreshEntriesTab.onclick = function(){switchTab("refresh-entries")};
+
     await load_wasm(); 
     await loadConfig();
+    await setEntries();
 }
 
 setup();

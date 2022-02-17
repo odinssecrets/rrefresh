@@ -375,6 +375,17 @@ pub fn remove_tab(tab_id: u32) -> () {
 }
 
 #[wasm_bindgen]
+pub async fn get_all_configs() -> js_sys::Array {
+    let all_configs: Vec<RefreshConfig> = RREFRESH_STORAGE
+        .lock()
+        .await
+        .iter()
+        .map(|(_k, v)| v.clone())
+        .collect();
+    all_configs.into_iter().map(JsValue::from).collect()
+}
+
+#[wasm_bindgen]
 extern "C" {
     pub fn refresh(tab_index: u32);
     async fn getOpenTabs() -> JsValue;

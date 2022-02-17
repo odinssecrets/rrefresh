@@ -11,7 +11,7 @@ async function getOpenTabs() {
 }
 
 async function handleMessage(request, sender, sendResponse) {
-    console.log("Received message: " + request.content.func);
+    //console.log("Received message: " + request.content.func);
     //console.log(request);
     try {
         if (request.content.func === "set_refresh") {
@@ -52,6 +52,18 @@ async function handleMessage(request, sender, sendResponse) {
                 data: config
             });
         }
+        else if (request.content.func === "get_all_configs") {
+            const { get_all_configs } = wasm_bindgen;
+            var config = await get_all_configs();
+            var configList = [];
+            config.forEach(cfg => {
+                configList.push(generateJsConfig(cfg));
+            });
+            return Promise.resolve({
+                response: "All configs loaded",
+                data: configList
+            });
+        }
         else if (request.content.func === "is_sticky") {
             const { is_sticky } = wasm_bindgen;
             var isSticky = await is_sticky(request.content.url);
@@ -89,13 +101,13 @@ async function handleMessage(request, sender, sendResponse) {
 
 function generateJsConfig(config) {
     return {
-        site: config.get_site(), 
-        url_patter: config.get_url_pattern(),
-        enabled: config.enabled,
-        stickyReload: config.sticky_reload,
-        pauseOnTyping: config.pause_on_typing,
-        paused: config.paused,
-        refreshTime: config.refresh_time,
+        Site: config.get_site(), 
+        UrlPattern: config.get_url_pattern(),
+        Enabled: config.enabled,
+        StickyReload: config.sticky_reload,
+        PauseOnTyping: config.pause_on_typing,
+        Paused: config.paused,
+        RefreshTime: config.refresh_time,
     };
 }
 
