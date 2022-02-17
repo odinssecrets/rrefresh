@@ -26,8 +26,6 @@ jobs:
       with:
         # Optional version of wasm-pack to install (eg. "v0.9.1", "latest")
         version: latest # optional, default is latest
-    - name: Setup rust
-      run: rustup
     - name: Build
       run: wasm-pack build --release --target=no-modules
     - name: Create zipped extension
