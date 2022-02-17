@@ -29,15 +29,19 @@ jobs:
     - name: Build
       run: wasm-pack build --release --target=no-modules
     - name: Create zipped extension
-      run:    zip -r rrefresh.zip wasm/
-              zip -r rrefresh.zip js/
-              zip -r rrefresh.zip html/*.html
-              zip -r rrefresh.zip html/*.js
-              zip -r rrefresh.zip html/*.css
-              zip -r rrefresh.zip icon/
-              zip -r rrefresh.zip manifest.json
+      run:    mkdir wasm/
+              mv "pkg/rrefresh_bg.wasm" wasm/
+              mv "pkg/rrefresh.js" wasm/
+              mkdir rrefresh/
+              mv -r wasm/ rrefresh/
+              mv -r js/ rrefresh/
+              mv -r html/*.html rrefresh/
+              mv -r html/*.js rrefresh/
+              mv -r html/*.css rrefresh/
+              mv -r icon/ rrefresh/
+              mv manifest.json rrefresh/
     - name: Create package artifact
       uses: actions/upload-artifact@v2
       with:
-          name: rrefresh.zip
-          path: rrefresh.zip
+          name: rrefresh
+          path: rrefresh
