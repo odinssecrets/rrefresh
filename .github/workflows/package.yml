@@ -36,3 +36,8 @@ jobs:
               zip -r rrefresh.zip html/*.css
               zip -r rrefresh.zip icon/
               zip -r rrefresh.zip manifest.json
+    - name: Create package artifact
+      uses: actions/upload-artifact@v2
+      with:
+          name: rrefresh.zip
+          path: rrefresh.zip
