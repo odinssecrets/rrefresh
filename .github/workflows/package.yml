@@ -1,0 +1,35 @@
+name: Rust
+
+on:
+  push:
+    branches: [ master, testing ]
+  pull_request:
+    branches: [ master, testing ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: wasm-pack-action
+      # You may pin to the exact commit or the version.
+      # uses: jetli/wasm-pack-action@f98777369a49686b132a9e8f0fdd59837bf3c3fd
+      uses: jetli/wasm-pack-action@v0.3.0
+      with:
+        # Optional version of wasm-pack to install (eg. "v0.9.1", "latest")
+        version: latest # optional, default is latest
+    - name: Build
+      run: wasm-pack build --release --target=no-modules
+    - name: Create zipped extension
+      run:    zip -r rrefresh.zip wasm/
+              zip -r rrefresh.zip js/
+              zip -r rrefresh.zip html/*.html
+              zip -r rrefresh.zip html/*.js
+              zip -r rrefresh.zip html/*.css
+              zip -r rrefresh.zip icon/
+              zip -r rrefresh.zip manifest.json
