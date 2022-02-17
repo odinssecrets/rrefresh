@@ -16,7 +16,8 @@ function handleError(error) {
 }
 
 async function getSite() {
-    const curtab = await browser.tabs.query({"active":true});
+    const curWindow = await browser.windows.getLastFocused(); 
+    const curtab = await browser.tabs.query({"active":true, "windowId": curWindow.id});
     return curtab[0].url;
 }
 
@@ -211,15 +212,14 @@ async function getAllConfigs() {
 async function setEntries() {
     var configs = await getAllConfigs();
     if (!configs || configs.length == 0) {
-        var defaultConfig = await getDefaultConfig();
-        configs = [defaultConfig]; 
+        return;
     }
     var entryTable = document.getElementById("entry-table");
     Object.entries(configs).forEach(config => {
         config = config[1];
         var newRow = document.createElement("div");
         var siteData = document.createElement("div");
-        var siteText = document.createTextNode(config.Site);
+        var siteText = document.createTextNode(config.UrlPattern);
         var active = document.createElement("div");
         newRow.classList.add("tr");
         siteData.classList.add("td");

@@ -144,7 +144,7 @@ dependencies = [
 
 [[package]]
 name = "rrefresh"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
