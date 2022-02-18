@@ -169,6 +169,7 @@ async function setConfig(config) {
     refreshPause.checked = config.PauseOnTyping;
     refreshSticky.checked = config.StickyReload; 
     urlLabel.textContent = config.UrlPattern;
+    urlLabel.title = config.UrlPattern;
     if (config.paused) {
         pause.value = "Unpause";
     } else {
