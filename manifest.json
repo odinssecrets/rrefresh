@@ -1,12 +1,19 @@
 {
     "name" : "rrefresh",
-    "version" : "1.0",
+    "version" : "1.0.0",
     "description" : "rrefresh",
     "permissions": [
         "menus",
         "tabs",
         "storage"
     ],
+
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "rrefresh@thefarbeyond.com",
+            "strict_min_version": "42.0"
+        }
+    },
 
     "browser_action": {
         "default_icon": "icon/rrefresh.png",
