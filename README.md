@@ -3,7 +3,7 @@
 This is a web extension that is used for auto-refreshing tabs.
 
 ## System Requirements
-- Only tested/developed for x86_64 Linux
+Only tested/developed for x86_64 Linux
 - make
 - rustc (tested on 1.60.0-nightly)
 - cargo
@@ -11,7 +11,7 @@ This is a web extension that is used for auto-refreshing tabs.
 
 ## Build 
 
-#Setup steps
+### Setup steps
 - Install rustup
     `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 - Select the nightly version of rustc
@@ -19,6 +19,6 @@ This is a web extension that is used for auto-refreshing tabs.
 - Install wasm-pack
     `cargo install wasm-pack`
 
-# Build instructions
+### Build instructions
 - Run `make` to build the release version or `make debug` to build a dev version.
 - Run `make package` to create the zipped package version of the extension.
