@@ -206,6 +206,7 @@ input:checked + .slider:before {
     min-height: 245px !important;
     overflow-y: auto;
     background: lightgrey;
+    scrollbar-width: thin;
 }
 
 #entry-table {

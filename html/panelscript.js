@@ -40,6 +40,7 @@ async function updateSelectedUrl () {
     else if (radios[2].checked) {   //full url
         urlLabel.textContent = parsed_url.get_full_url();
     }
+    urlLabel.title = urlLabel.textContent;
 }
 
 async function applyRefresh() {
