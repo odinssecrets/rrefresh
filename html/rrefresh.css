@@ -82,6 +82,7 @@ tr {
     padding-bottom: 5px;
     overflow-x: auto;
     white-space: nowrap;
+	scrollbar-width: thin;
 }
 
 #title {

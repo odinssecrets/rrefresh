@@ -157,7 +157,6 @@ async function setConfig(config) {
         console.log("Error setting config. Config object not found.");
         return;
     }
-
     var refreshEnable   = document.forms["input-items"].elements["refresh-enabled"];
     var refreshTime     = document.forms["input-items"].elements["refresh-time"];
     var refreshPause    = document.forms["input-items"].elements["refresh-pause"];
@@ -176,7 +175,6 @@ async function setConfig(config) {
     } else {
         pause.value = "Pause";
     }
-    await updateSelectedUrl();
 }
 
 function switchTab(newTab) {

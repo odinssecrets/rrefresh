@@ -218,7 +218,10 @@ pub fn refresh_tab(cfg: JsValue) -> () {
 pub async fn load_refresh_config(site: String) -> RefreshConfig {
     macros::log!("Loading from: {:?}", RREFRESH_STORAGE);
     match RREFRESH_STORAGE.lock().await.get(&site) {
-        Some(cfg) => cfg.clone(),
+        Some(cfg) => {
+			macros::log!("Got config {:?}", cfg);
+			cfg.clone()
+		},
         None => {
             let mut url: String = "".to_string();
             for (_id, tab) in OPEN_TABS.lock().unwrap_throw().iter() {
@@ -226,7 +229,9 @@ pub async fn load_refresh_config(site: String) -> RefreshConfig {
                     url = tab.url.clone();
                 }
             }
-            RefreshConfig::default_with_url(&url)
+            let cfg = RefreshConfig::default_with_url(&url);
+			macros::log!("Loading default config {:?}", cfg);
+			cfg
             //panic!("No config found for this site"),
         }
     }
@@ -351,12 +356,12 @@ pub async fn remove_pause(site: String) -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 pub async fn trigger_tab_reload() -> () {
-    macros::log!("Reloading tabs");
+    //macros::log!("Reloading tabs");
     let tabs: Vec<Tab> = getOpenTabs().await.into_serde().unwrap();
     for tab in tabs {
         OPEN_TABS.lock().unwrap_throw().insert(tab.id, tab);
     }
-    macros::log!("Got tabs {:?}", OPEN_TABS);
+    //macros::log!("Got tabs {:?}", OPEN_TABS);
 }
 
 #[wasm_bindgen]

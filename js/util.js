@@ -3,9 +3,10 @@ async function refresh (tab_index) {
 }
 
 async function getOpenTabs() {
+    const curWindow = await browser.windows.getLastFocused(); 
     var curtabs = await browser.tabs.query({}).then();
     curtabs = curtabs.map(function (tab) {
-        return {"id": tab.id, "url": tab.url, "active": tab.active};
+        return {"id": tab.id, "url": tab.url, "active": (tab.active && tab.windowId == curWindow.id)};
     });
     return curtabs;
 }
