@@ -21,6 +21,34 @@ async function getSite() {
     return curtab[0].url;
 }
 
+function showSubpathSelection() {
+    var urlLabel = document.getElementById("selected-url");
+    var selector = document.getElementById("subpath-selection");
+    var label = document.getElementById("subpath-label");
+    var slider = document.getElementById("subpath-slider");
+    var pathElements = document.getElementById("original-subpath").value.split("/").filter(subpath => subpath.length != 0);
+    selector.hidden = false;
+    label.hidden = false;
+    slider.max = pathElements.length-1;
+    slider.oninput = updateSubpath;
+    updateSubpath();
+}
+
+function updateSubpath(){
+    var urlLabel = document.getElementById("selected-url");
+    var originalSubpath = document.getElementById("original-subpath").value;
+    var slider = document.getElementById("subpath-slider");
+    var newSubpath = originalSubpath.split("/").slice(0, parseInt(slider.value)+1);
+    urlLabel.textContent = newSubpath.join("/");
+};
+
+function hideSubpathSelection() {
+    var selector = document.getElementById("subpath-selection");
+    var label = document.getElementById("subpath-label");
+    selector.hidden = true;
+    label.hidden = true;
+}
+
 async function updateSelectedUrl () {
     // Load the parse_url function from the wasm
     const { parse_url } = wasm_bindgen;
@@ -31,11 +59,14 @@ async function updateSelectedUrl () {
     // Set label text
     var radios = document.forms["input-items"].elements["select"];
     var urlLabel = document.getElementById("selected-url");
+    hideSubpathSelection();
     if (radios[0].checked) {        //domain
         urlLabel.textContent = parsed_url.get_domain();
     }
     else if (radios[1].checked) {   //subpath
         urlLabel.textContent = parsed_url.get_domain() + parsed_url.get_subpath();
+        document.getElementById("original-subpath").value = urlLabel.textContent;
+        showSubpathSelection();
     }
     else if (radios[2].checked) {   //full url
         urlLabel.textContent = parsed_url.get_full_url();
@@ -44,6 +75,7 @@ async function updateSelectedUrl () {
 }
 
 async function applyRefresh() {
+    var slider = document.getElementById("subpath-slider");
     var radios = document.forms["input-items"].elements["select"];
     var urlType = 0;
     for (var i in [...Array(radios.length).keys()]) {
@@ -60,6 +92,7 @@ async function applyRefresh() {
         func: "set_refresh",
         url: url,
         urlType: parseInt(urlType),
+        subpathDepth: parseInt(slider.value),
         time: refreshTime.valueAsNumber,
         pause: refreshPause.checked,
         sticky: refreshSticky.checked,
@@ -69,6 +102,7 @@ async function applyRefresh() {
         content : data
     });
     await set_promise;
+    await setEntries();
 }
 
 async function getDefaultConfig() {
@@ -157,19 +191,27 @@ async function setConfig(config) {
         console.log("Error setting config. Config object not found.");
         return;
     }
+    var radios          = document.forms["input-items"].elements["select"];
     var refreshEnable   = document.forms["input-items"].elements["refresh-enabled"];
     var refreshTime     = document.forms["input-items"].elements["refresh-time"];
     var refreshPause    = document.forms["input-items"].elements["refresh-pause"];
     var refreshSticky   = document.forms["input-items"].elements["refresh-sticky"];
-    var urlLabel        = document.getElementById("selected-url");
     var pause           = document.forms["input-items"].elements["pause"];
+    var urlLabel        = document.getElementById("selected-url");
 
+    radios[config.UrlType].checked = true;
     refreshEnable.checked = config.Enabled;
     refreshTime.value = config.RefreshTime;
     refreshPause.checked = config.PauseOnTyping;
     refreshSticky.checked = config.StickyReload; 
-    urlLabel.textContent = config.UrlPattern;
-    urlLabel.title = config.UrlPattern;
+
+    await updateSelectedUrl();
+    if (config.UrlType == 1) {
+        var slider = document.getElementById("subpath-slider");
+        showSubpathSelection();
+        slider.value = config.SubpathDepth;
+        updateSubpath();
+    }
     if (config.paused) {
         pause.value = "Unpause";
     } else {
@@ -178,18 +220,18 @@ async function setConfig(config) {
 }
 
 function switchTab(newTab) {
-	var tabs = document.getElementsByClassName("tabs");	
-	var tabBtns = document.getElementsByClassName("tablinks");	
-	for (var i = 0; i < tabs.length; i++) {
-		if (tabs[i].id === newTab) {
-			tabs[i].hidden = false;
+    var tabs = document.getElementsByClassName("tabs")
+    var tabBtns = document.getElementsByClassName("tablinks");
+    for (var i = 0; i < tabs.length; i++) {
+        if (tabs[i].id === newTab) {
+            tabs[i].hidden = false;
             tabBtns[i].classList.add("active");
-		}
-		else {
-			tabs[i].hidden = true;
+        }
+        else {
+            tabs[i].hidden = true;
             tabBtns[i].classList.remove("active");
-		}
-	}
+        }
+    }
 }
 
 async function getAllConfigs() {
@@ -215,6 +257,11 @@ async function setEntries() {
         return;
     }
     var entryTable = document.getElementById("entry-table");
+    // Clear table entries
+    Object.entries(entryTable.getElementsByClassName("tr")).slice(1).forEach(row => {
+        row = row[1]; // Just get the div object, not the index value
+        entryTable.removeChild(row);
+    });
     Object.entries(configs).forEach(config => {
         config = config[1];
         var newRow = document.createElement("div");
@@ -279,11 +326,11 @@ async function setup() {
     var pause = document.forms["input-items"].elements["pause"];
     pause.onclick = pauseRefresh;
 
-	var setRefreshTab = document.getElementById("set-refresh-tab");
-	setRefreshTab.onclick = function(){switchTab("set-refresh")};
+    var setRefreshTab = document.getElementById("set-refresh-tab");
+    setRefreshTab.onclick = function(){switchTab("set-refresh")};
     setRefreshTab.classList.add("active");
-	var refreshEntriesTab = document.getElementById("refresh-entries-tab");
-	refreshEntriesTab.onclick = function(){switchTab("refresh-entries")};
+    var refreshEntriesTab = document.getElementById("refresh-entries-tab");
+    refreshEntriesTab.onclick = function(){switchTab("refresh-entries")};
 
     await load_wasm(); 
     await loadConfig();

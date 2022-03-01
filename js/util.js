@@ -20,6 +20,7 @@ async function handleMessage(request, sender, sendResponse) {
             var set_promise = await set_refresh(
                 request.content.url,
                 request.content.urlType,
+                request.content.subpathDepth,
                 request.content.time,
                 request.content.pause,
                 request.content.sticky,
@@ -104,6 +105,8 @@ function generateJsConfig(config) {
     return {
         Site: config.get_site(), 
         UrlPattern: config.get_url_pattern(),
+        UrlType: config.url_type,
+        SubpathDepth: config.subpath_depth,
         Enabled: config.enabled,
         StickyReload: config.sticky_reload,
         PauseOnTyping: config.pause_on_typing,

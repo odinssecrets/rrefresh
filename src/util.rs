@@ -119,6 +119,7 @@ pub struct RefreshConfig {
     site: String,
     url_pattern: String,
     pub url_type: u8,
+    pub subpath_depth: u32,
     pub refresh_time: u32,
     pub pause_on_typing: bool,
     pub paused: bool,
@@ -139,7 +140,10 @@ impl RefreshConfig {
         let url: URL = parse_url(&self.site);
         self.url_pattern = match self.url_type.try_into().unwrap() {
             UrlType::Domain => url.domain,
-            UrlType::Subpath => url.path,
+            UrlType::Subpath => {
+                let path_parts = url.path.split("/").collect::<Vec<&str>>();
+                url.domain + &path_parts[0..(self.subpath_depth + 1) as usize].join("/")
+            }
             UrlType::FullUrl => url.full_url,
         };
     }
@@ -158,6 +162,7 @@ impl RefreshConfig {
             site: url.to_string(),
             url_pattern: url.to_string(),
             url_type: 2,
+            subpath_depth: 0,
             refresh_time: 30,
             pause_on_typing: false,
             paused: false,
@@ -219,9 +224,9 @@ pub async fn load_refresh_config(site: String) -> RefreshConfig {
     macros::log!("Loading from: {:?}", RREFRESH_STORAGE);
     match RREFRESH_STORAGE.lock().await.get(&site) {
         Some(cfg) => {
-			macros::log!("Got config {:?}", cfg);
-			cfg.clone()
-		},
+            macros::log!("Got config {:?}", cfg);
+            cfg.clone()
+        }
         None => {
             let mut url: String = "".to_string();
             for (_id, tab) in OPEN_TABS.lock().unwrap_throw().iter() {
@@ -230,8 +235,8 @@ pub async fn load_refresh_config(site: String) -> RefreshConfig {
                 }
             }
             let cfg = RefreshConfig::default_with_url(&url);
-			macros::log!("Loading default config {:?}", cfg);
-			cfg
+            macros::log!("Loading default config {:?}", cfg);
+            cfg
             //panic!("No config found for this site"),
         }
     }
@@ -253,6 +258,7 @@ pub fn apply_refresh(time: u64, cfg: &RefreshConfig) -> i32 {
 pub async fn set_refresh(
     site: String,
     url_type: u8,
+    subpath_depth: u32,
     time_in_sec: u32,
     pause_on_typing: bool,
     sticky_reload: bool,
@@ -268,6 +274,7 @@ pub async fn set_refresh(
         site: site.to_string(),
         url_pattern: "".to_string(),
         url_type: url_type,
+        subpath_depth: subpath_depth,
         refresh_time: time_in_sec,
         pause_on_typing: pause_on_typing,
         paused: false,

@@ -1,9 +1,9 @@
 body {
     width: 550px;
-    max-height: 275px;
-    min-height: 275px;
+    min-height: 270px;
     overflow: hidden;
     background: grey;
+    padding-bottom: 5px !important;
 }
 
 table {
@@ -167,6 +167,7 @@ input:checked + .slider:before {
 
 #tab_buttons {
     background-color: #ccc;
+    margin-bottom: 25px;
 }
 
 #tab_buttons button:hover {
@@ -258,4 +259,8 @@ input:checked + .slider:before {
 
 #entry-table .tr:nth-child(even) {
     background:darkgrey;
+}
+
+#subpath-slider {
+    width: 99%;
 }
