@@ -1,6 +1,6 @@
 [package]
 name = "rrefresh"
-version = "1.0.0"
+version = "1.0.2"
 authors = ["ben <ben@thefarbeyond.com>"]
 edition = "2018"
 

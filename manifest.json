@@ -1,6 +1,6 @@
 {
     "name" : "rrefresh",
-    "version" : "1.0.1",
+    "version" : "1.0.2",
     "description" : "rrefresh",
     "permissions": [
         "menus",
