@@ -2,6 +2,9 @@
 
 This is a web extension that is used for auto-refreshing tabs.
 
+This project was started to learn rust and webasm and to create
+a usable and customizable refreshing extension.
+
 ## System Requirements
 Only tested/developed for x86_64 Linux
 - make
@@ -22,3 +25,12 @@ Only tested/developed for x86_64 Linux
 ### Build instructions
 - Run `make` to build the release version or `make debug` to build a dev version.
 - Run `make package` to create the zipped package version of the extension.
+
+### Local testing
+- Testing via web-ext:
+    - npm install --global web-ext
+    - `make debug`
+    - Do `web-ext run` in the top level directory
+- Testing via local browser
+    - `make debug`
+    - Follow the instructions [here](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Your_first_WebExtension#installing)

@@ -86,6 +86,9 @@ impl URL {
     pub fn get_full_url(&self) -> String {
         self.full_url.clone()
     }
+    pub fn get_domain_and_path(&self) -> String {
+        self.domain.clone() + &self.path.clone()
+    }
     pub fn default() -> URL {
         return URL {
             path: "".to_string(),
@@ -142,15 +145,20 @@ impl RefreshConfig {
             UrlType::Domain => url.domain,
             UrlType::Subpath => {
                 let path_parts = url.path.split("/").collect::<Vec<&str>>();
-                url.domain + &path_parts[0..(self.subpath_depth + 1) as usize].join("/")
+                let path_parts = path_parts[0..(self.subpath_depth + 1) as usize].join("/");
+                url.domain + &path_parts
             }
             UrlType::FullUrl => url.full_url,
         };
     }
     pub fn match_url(&self, url: &str) -> bool {
+        macros::log!("Path is {:?}", parse_url(url).path);
+        let parsed_url = parse_url(url);
         match self.url_type.try_into().unwrap() {
-            UrlType::Domain => parse_url(url).domain == self.url_pattern,
-            UrlType::Subpath => parse_url(url).path.starts_with(&self.url_pattern),
+            UrlType::Domain => parsed_url.domain == self.url_pattern,
+            UrlType::Subpath => parsed_url
+                .get_domain_and_path()
+                .starts_with(&self.url_pattern),
             UrlType::FullUrl => self.url_pattern == url,
         }
     }
@@ -210,7 +218,7 @@ async fn get_config_by_url(url: &str) -> Vec<RefreshConfig> {
 #[wasm_bindgen]
 pub fn refresh_tab(cfg: JsValue) -> () {
     let cfg: RefreshConfig = cfg.into_serde().unwrap();
-    macros::log!("Refreshing tab with config {:?}", cfg);
+    macros::log!("Refreshing any tab matching config:\n{:?}", cfg);
     for (k, v) in OPEN_TABS.lock().unwrap_throw().iter() {
         if cfg.match_url(&v.url) {
             macros::log!("Refreshing tab {:?}", v);
