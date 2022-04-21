@@ -152,7 +152,6 @@ impl RefreshConfig {
         };
     }
     pub fn match_url(&self, url: &str) -> bool {
-        macros::log!("Path is {:?}", parse_url(url).path);
         let parsed_url = parse_url(url);
         match self.url_type.try_into().unwrap() {
             UrlType::Domain => parsed_url.domain == self.url_pattern,

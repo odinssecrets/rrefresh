@@ -5,6 +5,8 @@ This is a web extension that is used for auto-refreshing tabs.
 This project was started to learn rust and webasm and to create
 a usable and customizable refreshing extension.
 
+This project is still in a beta state and is being developed.
+
 ## System Requirements
 Only tested/developed for x86_64 Linux
 - make
